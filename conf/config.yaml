@@ -1,0 +1,8 @@
+ipfsUrl: http://127.0.0.1:5001
+soterUrl: https://sandbox.btfssoter.io
+uploaderPath: /api/v1/add
+verifierPath: /api/v1/order_details
+batchSize: 3
+logger:
+  path: .
+  level: debug
