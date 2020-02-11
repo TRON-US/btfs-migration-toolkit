@@ -1,12 +1,10 @@
 package core
 
 import (
-	"fmt"
 	"github.com/TRON-US/btfs-migration-toolkit/conf"
-	"github.com/TRON-US/btfs-migration-toolkit/log"
 
 	"github.com/fsnotify/fsnotify"
-	shell "github.com/ipfs/go-ipfs-api"
+	"github.com/ipfs/go-ipfs-api"
 	"github.com/spf13/viper"
 )
 
@@ -52,7 +50,6 @@ func getNewConfig() error {
 	}
 	Sh = shell.NewShell(Conf.IpfsUrl)
 
-	fmt.Printf("%v\n", Conf)
 	return nil
 }
 
@@ -60,9 +57,6 @@ func getNewConfig() error {
 func watchConfig() {
 	viper.WatchConfig()
 	viper.OnConfigChange(func(e fsnotify.Event) {
-		if err := getNewConfig(); err != nil {
-			log.Logger().Error(fmt.Sprintf("getConfigFile Error [v]", err))
-		}
-		log.Logger().Info(fmt.Sprintf("Config file changed: %s", e.Name))
+		_ = getNewConfig()
 	})
 }

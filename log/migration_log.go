@@ -4,7 +4,8 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/spf13/viper"
+	"github.com/TRON-US/btfs-migration-toolkit/core"
+
 	"go.uber.org/zap"
 )
 
@@ -15,9 +16,7 @@ var (
 
 // Init zap log.
 func initLog() {
-	logPath := fmt.Sprintf("log.path")
-	logLevel := fmt.Sprintf("log.level")
-	logger = InitLogger(fmt.Sprintf("%s/%s", viper.GetString(logPath), "migration.log"), viper.GetString(logLevel))
+	logger = InitLogger(fmt.Sprintf("%s/%s", core.Conf.Logger.Path, "migration.log"), core.Conf.Logger.Level)
 }
 
 // Get zap log instance.
