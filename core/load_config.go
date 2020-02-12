@@ -43,17 +43,7 @@ func getNewConfig() error {
 	if err = viper.ReadInConfig(); err != nil { // viper解析配置文件
 		return err
 	}
-	Conf = &conf.Config{
-		IpfsUrl: "https://ipfs.infura.io:5001",
-		SoterUrl: "https://sandbox.btfssoter.io",
-		PrivateKey: "c8f0884e706c761e80a9227736a4a595f56b43660041920a5e6765a9b8ac3ab7",
-		UserAddress: "TTCXimHXjen9BdTFW5JvcLKGWNm3SSuECF",
-		BatchSize: 100,
-		Logger: conf.LogConfig{
-			Path: ".",
-			Level: "debug",
-		},
-	}
+	Conf = &conf.Config{}
 
 	if err := viper.Unmarshal(Conf); err != nil {
 		return err
