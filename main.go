@@ -1,9 +1,11 @@
 package main
 
 import (
+	"fmt"
 	"github.com/TRON-US/btfs-migration-toolkit/constants"
 	"github.com/TRON-US/btfs-migration-toolkit/core"
 	"github.com/TRON-US/btfs-migration-toolkit/uploader"
+	"os"
 
 	"github.com/spf13/pflag"
 )
@@ -25,9 +27,15 @@ func main() {
 	switch *method {
 	case constants.BatchUpload:
 		uploader.BatchUpload(*inputFile)
-	case constants.SinglUpload:
+	case constants.SingleUpload:
 		uploader.SingleUpload(*ipfsHash)
-	case constants.Verify:
-		// TODO
+	default:
+		fmt.Println("unknown method")
+		os.Exit(0)
 	}
+
+	fmt.Printf("Migration complete.\n" +
+		"Please checkout %s and %s for batch migration.\n" +
+		"Or review screen output for single migration.\n",
+		constants.OutputHashFileName, constants.OutputRetryFileName)
 }

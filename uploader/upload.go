@@ -4,15 +4,13 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
-	"os"
-	"strings"
-	"sync"
-	"time"
-
 	"github.com/TRON-US/btfs-migration-toolkit/constants"
 	"github.com/TRON-US/btfs-migration-toolkit/core"
 	"github.com/TRON-US/btfs-migration-toolkit/log"
 	"github.com/TRON-US/soter-sdk-go/soter"
+	"os"
+	"strings"
+	"sync"
 )
 
 func BatchUpload(inputFilename string) {
@@ -54,7 +52,6 @@ func BatchUpload(inputFilename string) {
 		counter++
 		go func(h string, outFile *os.File, retryFile *os.File) {
 			defer wg.Done()
-			time.Sleep(time.Second * 1)
 			res, err := migrate(h)
 			if err != nil {
 				log.Logger().Error(fmt.Sprintf("ipfs_hash=%s, reason=[%v]", h, err))
@@ -110,15 +107,19 @@ func migrate(ipfsHash string) ([]string, error) {
 		return nil, err
 	}
 
+	// defer os.Remove(the_downloaded_file)
+	defer func(h string) {
+		// delete local files
+		if err := os.Remove(fmt.Sprintf("./%s", h)); err != nil {
+			errMsg := fmt.Sprintf("Failed to delete file %s", h)
+			log.Logger().Error(errMsg)
+		}
+	}(ipfsHash)
+
 	// upload the file to BTFS through soter
 	res, err := uploadToBTFS(ipfsHash)
 	if err != nil {
 		return nil, err
-	}
-	// delete local files
-	if err := os.Remove(fmt.Sprintf("./%s", ipfsHash)); err != nil {
-		errMsg := fmt.Sprintf("Failed to delete file %s", ipfsHash)
-		log.Logger().Error(errMsg)
 	}
 	return res, nil
 }
@@ -141,11 +142,11 @@ func uploadToBTFS(filename string) ([]string, error) {
 		return nil, err
 	}
 	if resp.Code != constants.OkCode {
+		errMsg := fmt.Sprintf("Error: code=%d, message=%s", resp.Code, resp.Message)
+		log.Logger().Error(errMsg)
 		if resp.Code == constants.InsufficientBalanceCode {
 			os.Exit(1)
 		}
-		errMsg := fmt.Sprintf("Error: code=%d, message=%s", resp.Code, resp.Message)
-		log.Logger().Error(errMsg)
 		return nil, fmt.Errorf(errMsg)
 	}
 	s, err := json.Marshal(resp.Data)

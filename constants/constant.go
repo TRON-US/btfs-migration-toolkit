@@ -8,7 +8,6 @@ const (
 	OutputRetryFileName = "output_retry.csv"
 
 	// method
-	BatchUpload = "BatchUpload"
-	SinglUpload = "SingleUpload"
-	Verify      = "Verify"
+	BatchUpload = "batch_upload"
+	SingleUpload = "single_upload"
 )
