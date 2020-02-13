@@ -1,21 +1,20 @@
-package uploader
+package service
 
 import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"os"
+	"strings"
+	"sync"
+
 	"github.com/TRON-US/btfs-migration-toolkit/constants"
 	"github.com/TRON-US/btfs-migration-toolkit/core"
 	"github.com/TRON-US/btfs-migration-toolkit/log"
 	"github.com/TRON-US/soter-sdk-go/soter"
-	"os"
-	"strings"
-	"sync"
 )
 
 func BatchUpload(inputFilename string) {
-	batchSize := core.Conf.BatchSize
-
 	inputHashFile, err := os.Open(inputFilename)
 	if err != nil {
 		log.Logger().Error(fmt.Sprintf("Failed to open file %s, reason=[%v]", inputFilename, err))
@@ -38,10 +37,18 @@ func BatchUpload(inputFilename string) {
 				constants.OutputHashFileName, err))
 		}
 	}()
+
 	outputRetryFile, err := os.Create(fmt.Sprintf("./%s", constants.OutputRetryFileName))
 	if err != nil {
-		log.Logger().Error(fmt.Sprintf("Failed to open %s, reason=[%v]", constants.OutputRetryFileName, err))
+		log.Logger().Error(fmt.Sprintf("Failed to open file %s, reason=[%v]", constants.OutputRetryFileName, err))
+		os.Exit(1)
 	}
+	defer func() {
+		if err := outputRetryFile.Close(); err != nil {
+			log.Logger().Error(fmt.Sprintf("Failed to close file %s, reason=[%v]",
+				constants.OutputRetryFileName, err))
+		}
+	}()
 
 	wg := sync.WaitGroup{}
 	scanner := bufio.NewScanner(inputHashFile)
@@ -72,7 +79,7 @@ func BatchUpload(inputFilename string) {
 				log.Logger().Error(err.Error())
 			}
 		}(hash, outputHashFile, outputRetryFile)
-		if counter % batchSize == 0 {
+		if counter % core.Conf.BatchSize == 0 {
 			wg.Wait()
 			counter = 0
 		}
@@ -80,8 +87,13 @@ func BatchUpload(inputFilename string) {
 	// wait here because counter < batchSize and no more lines to read
 	wg.Wait()
 	if err := scanner.Err(); err != nil {
-		log.Logger().Error(err.Error())
+		errMsg := fmt.Sprintf("Failed to scan input file, reason=[%v]", err)
+		log.Logger().Error(errMsg)
 	}
+
+	fmt.Printf("\nMigration complete.\n" +
+		"Please checkout %s and %s for batch migration.\n",
+		constants.OutputHashFileName, constants.OutputRetryFileName)
 }
 
 func SingleUpload(ipfsHash string)  {
@@ -138,8 +150,9 @@ func uploadToBTFS(filename string) ([]string, error) {
 	filePath := fmt.Sprintf("./%s", filename)
 	resp, err := sh.AddFile(core.Conf.UserAddress, filePath)
 	if err != nil {
-		log.Logger().Error(err.Error())
-		return nil, err
+		errMsg := fmt.Sprintf("Failed to add file, reason=[%v]", err)
+		log.Logger().Error(errMsg)
+		return nil, fmt.Errorf(errMsg)
 	}
 	if resp.Code != constants.OkCode {
 		errMsg := fmt.Sprintf("Error: code=%d, message=%s", resp.Code, resp.Message)
@@ -154,7 +167,7 @@ func uploadToBTFS(filename string) ([]string, error) {
 		log.Logger().Error(err.Error())
 		return nil, err
 	}
-	var soterResponse core.SoterResponse
+	var soterResponse core.SoterAddFileResponse
 	err = json.Unmarshal(s, &soterResponse)
 	if err != nil {
 		log.Logger().Error(err.Error())
