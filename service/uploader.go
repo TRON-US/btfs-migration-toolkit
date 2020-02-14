@@ -26,7 +26,7 @@ func BatchUpload(inputFilename string) {
 		}
 	}()
 
-	outputHashFile, err := os.Create(fmt.Sprintf("./%s", constants.OutputHashFileName))
+	outputHashFile, err := os.Create(constants.OutputHashFileName)
 	if err != nil {
 		log.Logger().Error(fmt.Sprintf("Failed to open file %s, reason=[%v]", constants.OutputHashFileName, err))
 		os.Exit(1)
@@ -38,7 +38,7 @@ func BatchUpload(inputFilename string) {
 		}
 	}()
 
-	outputRetryFile, err := os.Create(fmt.Sprintf("./%s", constants.OutputRetryFileName))
+	outputRetryFile, err := os.Create(constants.OutputRetryFileName)
 	if err != nil {
 		log.Logger().Error(fmt.Sprintf("Failed to open file %s, reason=[%v]", constants.OutputRetryFileName, err))
 		os.Exit(1)
@@ -57,22 +57,23 @@ func BatchUpload(inputFilename string) {
 		hash := scanner.Text()
 		wg.Add(1)
 		counter++
-		go func(h string, outFile *os.File, retryFile *os.File) {
+		go func(h string, outFile, retryFile *os.File) {
 			defer wg.Done()
 			res, err := migrate(h)
 			if err != nil {
-				log.Logger().Error(fmt.Sprintf("ipfs_hash=%s, reason=[%v]", h, err))
+				log.Logger().Error(fmt.Sprintf("[ipfs_hash=%s] Failed to migrate, reason=[%v]", h, err))
 				// definitely failed to upload through soter; write to output_retry.csv
 				_, err = fmt.Fprintln(retryFile, h)
 				if err != nil {
-					errMsg := fmt.Sprintf("Failed to write to file %s, hash=%s, reason=[%v]",
-						constants.OutputRetryFileName, h, err)
+					errMsg := fmt.Sprintf("[ipfs_hash=%s] Failed to write to file %s, reason=[%v]",
+						h, constants.OutputRetryFileName, err)
 					log.Logger().Error(errMsg)
 				}
 				return
 			}
-			log.Logger().Debug(fmt.Sprintf("[%s,%s,%s]", h, res[0], res[1]))
-			// write <ipfs_hash, request_id, btfs_hash> to output_hash.csv
+			// write (ipfs_hash, request_id, btfs_hash) to output_hash.csv
+			log.Logger().Debug(fmt.Sprintf("[ipfs_hash=%s] Write to file %s, (%s,%s,%s)",
+				h, constants.OutputHashFileName, h, res[0], res[1]))
 			line := fmt.Sprintf("%s,%s,%s", h, res[0], res[1])
 			_, err = fmt.Fprintln(outFile, line)
 			if err != nil {
@@ -99,7 +100,7 @@ func BatchUpload(inputFilename string) {
 func SingleUpload(ipfsHash string)  {
 	res, err := migrate(ipfsHash)
 	if err != nil {
-		log.Logger().Error(err.Error())
+		log.Logger().Error(fmt.Sprintf("[ipfs_hash=%s] Failed to migrate, reason=[%v]", ipfsHash, err))
 		os.Exit(1)
 	}
 	fmt.Printf("IPFS hash: %s\n", ipfsHash)
@@ -109,12 +110,11 @@ func SingleUpload(ipfsHash string)  {
 
 func migrate(ipfsHash string) ([]string, error) {
 	if !strings.HasPrefix(ipfsHash, "Qm") {
-		errMsg := fmt.Sprintf("input with invalid IPFS hash [%s]", ipfsHash)
-		log.Logger().Debug(errMsg)
+		errMsg := fmt.Sprintf("[ipfs_hash=%s] Input with invalid ipfs hash", ipfsHash)
 		return nil, fmt.Errorf(errMsg)
 	}
 	// download file from IPFS network to local file system
-	log.Logger().Debug(fmt.Sprintf("downloading file from IPFS network, %s", ipfsHash))
+	log.Logger().Debug(fmt.Sprintf("[ipfs_hash=%s] Downloading the file from IPFS network", ipfsHash))
 	if err := downloadFromIPFS(ipfsHash); err != nil {
 		return nil, err
 	}
@@ -123,12 +123,13 @@ func migrate(ipfsHash string) ([]string, error) {
 	defer func(h string) {
 		// delete local files
 		if err := os.Remove(fmt.Sprintf("./%s", h)); err != nil {
-			errMsg := fmt.Sprintf("Failed to delete file %s", h)
+			errMsg := fmt.Sprintf("[ipfs_hash=%s] Failed to delete local file", h)
 			log.Logger().Error(errMsg)
 		}
 	}(ipfsHash)
 
 	// upload the file to BTFS through soter
+	log.Logger().Debug(fmt.Sprintf("[ipfs_hash=%s] Uploading the file to BTFS network", ipfsHash))
 	res, err := uploadToBTFS(ipfsHash)
 	if err != nil {
 		return nil, err
@@ -139,7 +140,7 @@ func migrate(ipfsHash string) ([]string, error) {
 func downloadFromIPFS(hash string) error {
 	// go-ipfs-api, sdk: get
 	if err := core.Sh.Get(hash, hash); err != nil {
-		return err
+		return fmt.Errorf("downloading from IPFS errors out, %v", err)
 	}
 
 	return nil
@@ -150,13 +151,11 @@ func uploadToBTFS(filename string) ([]string, error) {
 	filePath := fmt.Sprintf("./%s", filename)
 	resp, err := sh.AddFile(core.Conf.UserAddress, filePath)
 	if err != nil {
-		errMsg := fmt.Sprintf("Failed to add file, reason=[%v]", err)
-		log.Logger().Error(errMsg)
+		errMsg := fmt.Sprintf("failed to add file, reason=[%v]", err)
 		return nil, fmt.Errorf(errMsg)
 	}
 	if resp.Code != constants.OkCode {
-		errMsg := fmt.Sprintf("Error: code=%d, message=%s", resp.Code, resp.Message)
-		log.Logger().Error(errMsg)
+		errMsg := fmt.Sprintf("response code error: code=%d, message=%s", resp.Code, resp.Message)
 		if resp.Code == constants.InsufficientBalanceCode {
 			os.Exit(1)
 		}
@@ -164,14 +163,12 @@ func uploadToBTFS(filename string) ([]string, error) {
 	}
 	s, err := json.Marshal(resp.Data)
 	if err != nil {
-		log.Logger().Error(err.Error())
-		return nil, err
+		return nil, fmt.Errorf("failed to marshal response data, %v", err)
 	}
 	var soterResponse core.SoterAddFileResponse
 	err = json.Unmarshal(s, &soterResponse)
 	if err != nil {
-		log.Logger().Error(err.Error())
-		return nil, err
+		return nil, fmt.Errorf("failed to unmarshal soter response data, %v", err)
 	}
 	res := [...]string{soterResponse.RequestId, soterResponse.Cid}
 	return res[:], nil

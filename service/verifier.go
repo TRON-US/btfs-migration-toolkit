@@ -82,7 +82,7 @@ func BatchVerify(filename string) {
 		line := scanner.Text()
 		wg.Add(1)
 		counter++
-		log.Logger().Debug(fmt.Sprintf("verifying %s", line))
+		log.Logger().Debug(fmt.Sprintf("Verifying %s", line))
 
 		go func(str string, pFile, fFile, sFile, eFile *os.File) {
 			defer wg.Done()
@@ -90,10 +90,11 @@ func BatchVerify(filename string) {
 			words := strings.Split(str, constants.Delimiter)
 			s, err := verify(words[1])
 			if err != nil {
+				log.Logger().Error(fmt.Sprintf("[request_id=%s] Failed to verify, reason=[%v]", words[1], err))
 				_, err := fmt.Fprintln(eFile, str)
 				if err != nil {
-					errMsg := fmt.Sprintf("Failed to write to file %s, reason=[%v]",
-						constants.OutputErrorFileName, err)
+					errMsg := fmt.Sprintf("[request_id=%s] Failed to write to file %s, reason=[%v]",
+						words[1], constants.OutputErrorFileName, err)
 					log.Logger().Error(errMsg)
 				}
 				return
@@ -101,29 +102,29 @@ func BatchVerify(filename string) {
 			if s == constants.StatusP {
 				_, err := fmt.Fprintln(pFile, str)
 				if err != nil {
-					errMsg := fmt.Sprintf("Failed to write to file %s, reason=[%v]",
-						constants.OutputPendingFileName, err)
+					errMsg := fmt.Sprintf("[request_id=%s] Failed to write to file %s, reason=[%v]",
+						words[1], constants.OutputPendingFileName, err)
 					log.Logger().Error(errMsg)
 				}
 			} else if s == constants.StatusS {
 				_, err := fmt.Fprintln(sFile, str)
 				if err != nil {
-					errMsg := fmt.Sprintf("Failed to write to file %s, reason=[%v]",
-						constants.OutputSucessFileName, err)
+					errMsg := fmt.Sprintf("[request_id=%s] Failed to write to file %s, reason=[%v]",
+						words[1], constants.OutputSucessFileName, err)
 					log.Logger().Error(errMsg)
 				}
 			} else if s == constants.StatusF {
 				_, err := fmt.Fprintln(fFile, words[0])
 				if err != nil {
-					errMsg := fmt.Sprintf("Failed to write to file %s, reason=[%v]",
-						constants.OutputFailFileName, err)
+					errMsg := fmt.Sprintf("[request_id=%s] Failed to write to file %s, reason=[%v]",
+						words[1], constants.OutputFailFileName, err)
 					log.Logger().Error(errMsg)
 				}
 			} else {
 				_, err := fmt.Fprintln(eFile, str)
 				if err != nil {
-					errMsg := fmt.Sprintf("Failed to write to file %s, reason=[%v]",
-						constants.OutputErrorFileName, err)
+					errMsg := fmt.Sprintf("[request_id=%s] Failed to write to file %s, reason=[%v]",
+						words[1], constants.OutputErrorFileName, err)
 					log.Logger().Error(errMsg)
 				}
 			}
@@ -171,25 +172,20 @@ func verify(requestId string) (string, error) {
 	sh := soter.NewShell(core.Conf.PrivateKey, core.Conf.UserAddress, core.Conf.SoterUrl)
 	resp, err := sh.QueryOrderDetails(requestId)
 	if err != nil {
-		errMsg := fmt.Sprintf("Failed to query order details, reason=[%v]", err)
-		log.Logger().Error(errMsg)
-		return "", fmt.Errorf(errMsg)
+		return "", fmt.Errorf("failed to query order details, %v", err)
 	}
 	if resp.Code != constants.OkCode {
-		errMsg := fmt.Sprintf("Error: code=%d, message=%s, request_id=%s", resp.Code, resp.Message, requestId)
-		log.Logger().Error(errMsg)
+		errMsg := fmt.Sprintf("response code error: code=%d, message=%s", resp.Code, resp.Message)
 		return "", fmt.Errorf(errMsg)
 	}
 	s, err := json.Marshal(resp.Data)
 	if err != nil {
-		log.Logger().Error(err.Error())
-		return "", err
+		return "", fmt.Errorf("failed to marshal response data, %v", err)
 	}
 	var soterResponse core.SoterOrderDetailsResponse
 	err = json.Unmarshal(s, &soterResponse)
 	if err != nil {
-		log.Logger().Error(err.Error())
-		return "", err
+		return "", fmt.Errorf("failed to unmarshal soter response data, %v", err)
 	}
 
 	return soterResponse.Status, nil
