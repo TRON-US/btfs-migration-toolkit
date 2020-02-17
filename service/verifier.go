@@ -7,6 +7,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/TRON-US/btfs-migration-toolkit/constants"
 	"github.com/TRON-US/btfs-migration-toolkit/core"
@@ -26,7 +27,16 @@ func BatchVerify(filename string) {
 		}
 	}()
 
-	outputP, err := os.Create(constants.OutputPendingFileName)
+	outputDir := fmt.Sprintf("output-%d", time.Now().Unix())
+	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
+		err = os.MkdirAll(outputDir, 0755)
+		if err != nil {
+			log.Logger().Error(fmt.Sprintf("Failed to create dir %s, reason=[%v]", outputDir, err))
+			os.Exit(1)
+		}
+	}
+
+	outputP, err := os.Create(fmt.Sprintf("./%s/%s", outputDir, constants.OutputPendingFileName))
 	if err != nil {
 		log.Logger().Error(fmt.Sprintf("Failed to open file %s, reason=[%v]",
 			constants.OutputPendingFileName, err))
@@ -38,7 +48,7 @@ func BatchVerify(filename string) {
 				constants.OutputPendingFileName, err))
 		}
 	}()
-	outputF, err := os.Create(constants.OutputFailFileName)
+	outputF, err := os.Create(fmt.Sprintf("./%s/%s", outputDir, constants.OutputFailFileName))
 	if err != nil {
 		log.Logger().Error(fmt.Sprintf("Failed to open file %s, reason=[%v]",
 			constants.OutputFailFileName, err))
@@ -50,7 +60,7 @@ func BatchVerify(filename string) {
 				constants.OutputFailFileName, err))
 		}
 	}()
-	outputS, err := os.Create(constants.OutputSucessFileName)
+	outputS, err := os.Create(fmt.Sprintf("./%s/%s", outputDir, constants.OutputSucessFileName))
 	if err != nil {
 		log.Logger().Error(fmt.Sprintf("Failed to open file %s, reason=[%v]",
 			constants.OutputSucessFileName, err))
@@ -150,6 +160,7 @@ func BatchVerify(filename string) {
 func SingleVerify(requestId string) {
 	s, err := verify(requestId)
 	if err != nil {
+		fmt.Printf("Failed to verify %s, reason=[%v]", requestId, err)
 		os.Exit(1)
 	}
 	status := "unknown"
