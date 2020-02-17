@@ -12,6 +12,8 @@ import (
 	"github.com/TRON-US/btfs-migration-toolkit/core"
 	"github.com/TRON-US/btfs-migration-toolkit/log"
 	"github.com/TRON-US/soter-sdk-go/soter"
+
+	"github.com/ipfs/go-ipfs-api"
 )
 
 func BatchUpload(inputFilename string) {
@@ -139,7 +141,8 @@ func migrate(ipfsHash string) ([]string, error) {
 
 func downloadFromIPFS(hash string) error {
 	// go-ipfs-api, sdk: get
-	if err := core.Sh.Get(hash, hash); err != nil {
+	sh := shell.NewShell(core.Conf.IpfsUrl)
+	if err := sh.Get(hash, hash); err != nil {
 		return fmt.Errorf("downloading from IPFS errors out, %v", err)
 	}
 

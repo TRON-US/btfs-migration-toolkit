@@ -2,14 +2,11 @@ package core
 
 import (
 	"github.com/TRON-US/btfs-migration-toolkit/conf"
-
 	"github.com/fsnotify/fsnotify"
-	"github.com/ipfs/go-ipfs-api"
 	"github.com/spf13/viper"
 )
 
 var Conf *conf.Config
-var Sh *shell.Shell
 
 //init config file to viper
 func InitConfig(cfg string) error {
@@ -48,7 +45,6 @@ func getNewConfig() error {
 	if err := viper.Unmarshal(Conf); err != nil {
 		return err
 	}
-	Sh = shell.NewShell(Conf.IpfsUrl)
 
 	return nil
 }
