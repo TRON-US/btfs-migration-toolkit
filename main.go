@@ -2,10 +2,11 @@ package main
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/TRON-US/btfs-migration-toolkit/constants"
 	"github.com/TRON-US/btfs-migration-toolkit/core"
-	"github.com/TRON-US/btfs-migration-toolkit/uploader"
-	"os"
+	"github.com/TRON-US/btfs-migration-toolkit/service"
 
 	"github.com/spf13/pflag"
 )
@@ -15,6 +16,7 @@ var (
 	method = pflag.StringP("method", "m", "", "choose a method to run")
 	inputFile = pflag.StringP("input", "i", "", "input .csv file with a list of IPFS QmHash")
 	ipfsHash = pflag.StringP("hash", "h", "", "IPFS hash to migrate")
+	requestId = pflag.StringP("request-id", "r", "", "request id to query for")
 )
 
 func main() {
@@ -26,16 +28,15 @@ func main() {
 
 	switch *method {
 	case constants.BatchUpload:
-		uploader.BatchUpload(*inputFile)
+		service.BatchUpload(*inputFile)
 	case constants.SingleUpload:
-		uploader.SingleUpload(*ipfsHash)
+		service.SingleUpload(*ipfsHash)
+	case constants.BatchVerify:
+		service.BatchVerify(*inputFile)
+	case constants.SingleVerify:
+		service.SingleVerify(*requestId)
 	default:
 		fmt.Println("unknown method")
 		os.Exit(0)
 	}
-
-	fmt.Printf("Migration complete.\n" +
-		"Please checkout %s and %s for batch migration.\n" +
-		"Or review screen output for single migration.\n",
-		constants.OutputHashFileName, constants.OutputRetryFileName)
 }
