@@ -72,7 +72,7 @@ func BatchVerify(filename string) {
 				constants.OutputSucessFileName, err))
 		}
 	}()
-	outputE, err := os.Create(constants.OutputErrorFileName)
+	outputE, err := os.Create(fmt.Sprintf("./%s/%s", outputDir, constants.OutputErrorFileName))
 	if err != nil {
 		log.Logger().Error(fmt.Sprintf("Failed to open file %s, reason=[%v]",
 			constants.OutputErrorFileName, err))
@@ -152,9 +152,8 @@ func BatchVerify(filename string) {
 	}
 
 	fmt.Printf("\nVerification complete.\n" +
-		"Please checkout %s, %s, %s, and %s for batch verification.\n",
-		constants.OutputPendingFileName, constants.OutputFailFileName,
-		constants.OutputSucessFileName, constants.OutputErrorFileName)
+		"Please checkout directory %s for batch verification.\n\n",
+		outputDir)
 }
 
 func SingleVerify(requestId string) {
@@ -174,8 +173,8 @@ func SingleVerify(requestId string) {
 	}
 
 	fmt.Printf(
-		"The request id is %s\n" +
-		"The upload status is %s\n",
+		"\nThe request id is %s\n" +
+		"The upload status is %s\n\n",
 		requestId, status)
 }
 
