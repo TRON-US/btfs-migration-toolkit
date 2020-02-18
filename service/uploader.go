@@ -95,7 +95,7 @@ func BatchUpload(inputFilename string) {
 	}
 
 	fmt.Printf("\nMigration complete.\n" +
-		"Please checkout %s and %s for batch migration.\n",
+		"Please checkout %s and %s for batch migration.\n\n",
 		constants.OutputHashFileName, constants.OutputRetryFileName)
 }
 
@@ -105,9 +105,9 @@ func SingleUpload(ipfsHash string)  {
 		log.Logger().Error(fmt.Sprintf("[ipfs_hash=%s] Failed to migrate, reason=[%v]", ipfsHash, err))
 		os.Exit(1)
 	}
-	fmt.Printf("IPFS hash: %s\n", ipfsHash)
+	fmt.Printf("\nIPFS hash: %s\n", ipfsHash)
 	fmt.Printf("BTFS hash: %s\n", res[1])
-	fmt.Printf("Request ID: %s\n", res[0])
+	fmt.Printf("Request ID: %s\n\n", res[0])
 }
 
 func migrate(ipfsHash string) ([]string, error) {
