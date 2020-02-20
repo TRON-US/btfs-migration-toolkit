@@ -74,8 +74,7 @@ func BatchUpload(inputFilename string) {
 				return
 			}
 			// write (ipfs_hash, request_id, btfs_hash) to output_hash.csv
-			log.Logger().Debug(fmt.Sprintf("[ipfs_hash=%s] Write to file %s, (%s,%s,%s)",
-				h, constants.OutputHashFileName, h, res[0], res[1]))
+			log.Logger().Debug(fmt.Sprintf("[ipfs_hash=%s] Write to file %s", h, constants.OutputHashFileName))
 			line := fmt.Sprintf("%s,%s,%s", h, res[0], res[1])
 			_, err = fmt.Fprintln(outFile, line)
 			if err != nil {
